@@ -111,10 +111,8 @@ export class Issues extends Effect.Service<Issues>()('ghui/GitHub/Issues', {
   accessors: true,
   sync: () => ({
     list: Effect.fn('Issues.list')(function* ({
-      author,
       repo,
     }: {
-      author: Option.Option<string>
       repo: Option.Option<{ owner: string; name: string }>
     }) {
       const [gh, ...args] = [

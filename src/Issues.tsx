@@ -13,7 +13,6 @@ export const Issues = () => {
   const repo = RQE.useQuery(Queries.currentDirectoryRepo())
   const issues = RQE.useQuery(
     Queries.issues({
-      author: Option.none(),
       repo: Option.none(),
     })
   )

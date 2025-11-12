@@ -38,7 +38,6 @@ export const pullRequestReadme = (options: {
 }
 
 export const issues = (options: {
-  author: Option.Option<string>
   repo: Option.Option<{ owner: string; name: string }>
 }) =>
   RQE.queryOptions({
