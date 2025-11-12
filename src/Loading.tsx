@@ -1,8 +1,8 @@
 import { TextAttributes } from '@opentui/core'
-import spinners from 'cli-spinners'
+import spinners, { type SpinnerName } from 'cli-spinners'
 import { useEffect, useState } from 'react'
 
-export const Loading = ({ kind }: { kind: spinners.SpinnerName }) => {
+export const Loading = ({ kind }: { kind: SpinnerName }) => {
   const [frame, setFrame] = useState(0)
 
   useEffect(() => {
