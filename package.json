@@ -24,6 +24,7 @@
     "@opentui/core": "^0.1.39",
     "@opentui/react": "^0.1.39",
     "@tanstack/react-query": "^5.90.7",
+    "cli-spinners": "^3.3.0",
     "effect": "^3.19.2",
     "react": "^19.2.0",
     "tiny-invariant": "^1.3.3"

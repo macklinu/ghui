@@ -11,6 +11,7 @@
         "@opentui/core": "^0.1.39",
         "@opentui/react": "^0.1.39",
         "@tanstack/react-query": "^5.90.7",
+        "cli-spinners": "^3.3.0",
         "effect": "^3.19.2",
         "react": "^19.2.0",
         "tiny-invariant": "^1.3.3",
@@ -269,6 +270,8 @@
     "bun-webgpu-win32-x64": ["bun-webgpu-win32-x64@0.1.3", "", { "os": "win32", "cpu": "x64" }, "sha512-vlspsFffctJlBnFfs2lW3QgDD6LyFu8VT18ryID7Qka5poTj0clGVRxz7DFRi7yva3GovEGw/82z/WVc5US8Pw=="],
 
     "cli-cursor": ["cli-cursor@5.0.0", "", { "dependencies": { "restore-cursor": "^5.0.0" } }, "sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw=="],
+
+    "cli-spinners": ["cli-spinners@3.3.0", "", {}, "sha512-/+40ljC3ONVnYIttjMWrlL51nItDAbBrq2upN8BPyvGU/2n5Oxw3tbNwORCaNuNqLJnxGqOfjUuhsv7l5Q4IsQ=="],
 
     "cli-truncate": ["cli-truncate@5.1.1", "", { "dependencies": { "slice-ansi": "^7.1.0", "string-width": "^8.0.0" } }, "sha512-SroPvNHxUnk+vIW/dOSfNqdy1sPEFkrTk6TUtqLCnBlo3N7TNYYkzzN7uSD6+jVjrdO4+p8nH7JzH6cIvUem6A=="],
 
