@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
-      - run: bun build --compile --minify --sourcemap --target=${{ matrix.target }} ./src/index.tsx --outfile dist/ghui-${{ matrix.target }}
+      - run: bun build --compile --minify --sourcemap --target=bun-${{ matrix.target }} ./src/index.tsx --outfile dist/ghui-${{ matrix.target }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
