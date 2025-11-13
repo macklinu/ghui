@@ -1,8 +1,9 @@
+import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import * as DateTime from 'effect/DateTime'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import invariant from 'tiny-invariant'
 
 import { Loading } from './Loading'
@@ -17,8 +18,25 @@ export const Issues = () => {
     })
   )
 
-  const [selectedIssue, setSelectedIssue] = useState<Option.Option<number>>(
-    Option.none()
+  const [selectedIssueNumber, setSelectedIssueNumber] = useState<
+    Option.Option<number>
+  >(Option.none())
+
+  useEffect(() => {
+    if (issues.isSuccess) {
+      setSelectedIssueNumber(Option.fromNullable(issues.data[0]?.number))
+    }
+  }, [issues.isSuccess, issues.data])
+
+  const selectedIssue = Match.value([issues, selectedIssueNumber]).pipe(
+    Match.when(
+      [{ isSuccess: true }, Option.isSome],
+      ([{ data }, issueNumber]) =>
+        Option.fromNullable(
+          data.find((issue) => issue.number === issueNumber.value)
+        )
+    ),
+    Match.orElse(() => Option.none())
   )
 
   const shiftFocus = useCallback(() => {}, [])
@@ -30,7 +48,7 @@ export const Issues = () => {
   })
 
   return (
-    <box padding={2} flexDirection='column'>
+    <box padding={1} flexDirection='column'>
       <ascii-font text='ghui' font='tiny' marginBottom={2} />
       <box flexDirection='row' alignItems='center' gap={1}>
         {Match.value(repo).pipe(
@@ -40,10 +58,10 @@ export const Issues = () => {
               <text>{Option.getOrThrow(repo)}</text>
               <text>{'→'}</text>
               <text>issues</text>
-              {Option.isSome(selectedIssue) && (
+              {Option.isSome(selectedIssueNumber) && (
                 <>
                   <text>{'→'}</text>
-                  <text>#{selectedIssue.value}</text>
+                  <text>#{selectedIssueNumber.value}</text>
                 </>
               )}
             </>
@@ -64,10 +82,10 @@ export const Issues = () => {
                   value: issue.number,
                   description: `#${issue.number} | ${issue.user.login} | ${DateTime.format(issue.created_at)}`,
                 }))}
-                onSelect={(index, option) => {
+                onChange={(index, option) => {
                   invariant(option)
                   invariant(typeof option.value === 'number')
-                  setSelectedIssue(Option.some(option.value))
+                  setSelectedIssueNumber(Option.some(option.value))
                 }}
               />
             )),
@@ -79,15 +97,25 @@ export const Issues = () => {
           height='100%'
           border
           borderColor='gray'
-          paddingTop={1}
-          paddingBottom={1}
           paddingLeft={2}
           paddingRight={2}
         >
+          <box marginBottom={1} gap={1} flexDirection='row'>
+            {Option.map(selectedIssue, (issue) => (
+              <>
+                <text>
+                  <span attributes={TextAttributes.DIM}>#{issue.number}</span>
+                </text>
+                <text>
+                  <strong>{issue.title}</strong>
+                </text>
+              </>
+            )).pipe(Option.getOrNull)}
+          </box>
           <text>
             {Match.value(issues).pipe(
               Match.when({ isSuccess: true }, ({ data }) =>
-                Option.match(selectedIssue, {
+                Option.match(selectedIssueNumber, {
                   onNone: () => null,
                   onSome: (selectedIssueNumber) =>
                     data

@@ -3,7 +3,7 @@ import { useKeyboard } from '@opentui/react'
 import * as DateTime from 'effect/DateTime'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import invariant from 'tiny-invariant'
 
 import { Loading } from './Loading'
@@ -25,13 +25,26 @@ export const PullRequests = ({
     })
   )
 
-  const [selectedPr, setSelectedPr] = useState<Option.Option<number>>(
-    Option.none()
+  const [selectedPrNumber, setSelectedPrNumber] = useState<
+    Option.Option<number>
+  >(Option.none())
+
+  const selectedPr = Match.value([pulls, selectedPrNumber]).pipe(
+    Match.when([{ isSuccess: true }, Option.isSome], ([{ data }, prNumber]) =>
+      Option.fromNullable(data.find((pr) => pr.number === prNumber.value))
+    ),
+    Match.orElse(() => Option.none())
   )
+
+  useEffect(() => {
+    if (pulls.isSuccess) {
+      setSelectedPrNumber(Option.fromNullable(pulls.data[0]?.number))
+    }
+  }, [pulls.isSuccess, pulls.data])
 
   const readme = RQE.useQuery(
     Queries.pullRequestReadme({
-      number: selectedPr,
+      number: selectedPrNumber,
       repo: Option.none(),
     })
   )
@@ -45,7 +58,7 @@ export const PullRequests = ({
   })
 
   return (
-    <box padding={2} flexDirection='column'>
+    <box padding={1} flexDirection='column'>
       <ascii-font text='ghui' font='tiny' marginBottom={2} />
       <box flexDirection='row' alignItems='center' gap={1}>
         {Match.value(repo).pipe(
@@ -55,10 +68,10 @@ export const PullRequests = ({
               <text>{Option.getOrThrow(repo)}</text>
               <text>{'→'}</text>
               <text>pulls</text>
-              {Option.isSome(selectedPr) && (
+              {Option.isSome(selectedPrNumber) && (
                 <>
                   <text>{'→'}</text>
-                  <text>#{selectedPr.value}</text>
+                  <text>#{selectedPrNumber.value}</text>
                 </>
               )}
             </>
@@ -79,12 +92,12 @@ export const PullRequests = ({
                   value: pr.number,
                   description: `#${pr.number} | ${pr.user.login} | ${DateTime.format(pr.created_at)}`,
                 }))}
-                onSelect={(index, option) => {
+                onChange={(index, option) => {
                   invariant(option)
                   invariant(typeof option.value === 'number')
-                  setSelectedPr(Option.some(option.value))
+                  setSelectedPrNumber(Option.some(option.value))
                 }}
-              ></select>
+              />
             )),
             Match.orElse(() => null)
           )}
@@ -94,11 +107,22 @@ export const PullRequests = ({
           height='100%'
           border
           borderColor='gray'
-          paddingTop={1}
-          paddingBottom={1}
           paddingLeft={2}
           paddingRight={2}
         >
+          <box marginBottom={1} gap={1} flexDirection='row'>
+            {Option.map(selectedPr, (pr) => (
+              <>
+                <text>
+                  <span attributes={TextAttributes.DIM}>#{pr.number}</span>
+                </text>
+                <text>
+                  <strong>{pr.title}</strong>
+                </text>
+              </>
+            )).pipe(Option.getOrNull)}
+          </box>
+
           {Match.value(readme).pipe(
             Match.when({ isLoading: true }, () => <Loading kind='dots' />),
             Match.when({ status: 'success' }, ({ data }) =>
