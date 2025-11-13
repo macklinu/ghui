@@ -12,6 +12,7 @@ jobs:
     name: Version
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
 
       - name: Create Release Pull Request

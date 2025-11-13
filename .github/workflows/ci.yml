@@ -10,12 +10,14 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
       - run: bun lint
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
       - run: bun typecheck
   build:
@@ -41,6 +43,7 @@ jobs:
           #   runs-on: windows-11-arm
           #   target: windows-arm64
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
       - run: bun build --compile --minify --sourcemap --target=${{ matrix.target }} ./src/index.tsx --outfile dist/ghui-${{ matrix.target }}
       - name: Upload Artifact
