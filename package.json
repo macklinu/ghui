@@ -4,28 +4,28 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@effect/language-service": "^0.55.2",
+    "@effect/language-service": "^0.55.3",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@macklinu/prettier-config": "^0.0.0",
     "@types/bun": "1.3.2",
-    "@types/react": "^19.2.2",
+    "@types/react": "^19.2.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "oxlint": "^1.27.0",
+    "oxlint": "^1.28.0",
     "prettier": "^3.6.2"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@effect/cli": "^0.72.0",
-    "@effect/platform": "^0.93.0",
+    "@effect/cli": "^0.72.1",
+    "@effect/platform": "^0.93.1",
     "@effect/platform-bun": "^0.83.0",
-    "@opentui/core": "^0.1.39",
-    "@opentui/react": "^0.1.39",
-    "@tanstack/react-query": "^5.90.7",
+    "@opentui/core": "^0.1.42",
+    "@opentui/react": "^0.1.42",
+    "@tanstack/react-query": "^5.90.8",
     "cli-spinners": "^3.3.0",
-    "effect": "^3.19.2",
+    "effect": "^3.19.3",
     "react": "^19.2.0",
     "tiny-invariant": "^1.3.3"
   },
