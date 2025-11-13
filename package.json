@@ -32,6 +32,7 @@
   "scripts": {
     "prepare": "husky",
     "lint": "oxlint",
+    "typecheck": "tsc --noEmit",
     "build": "bun build --compile --minify --sourcemap ./src/index.tsx --outfile ./dist/ghui"
   },
   "packageManager": "bun@1.3.2"
