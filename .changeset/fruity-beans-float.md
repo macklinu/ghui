@@ -1,5 +1,0 @@
----
-'ghui': patch
----
-
-Fix publishing

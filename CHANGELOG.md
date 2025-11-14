@@ -1,5 +1,11 @@
 # ghui
 
+## 0.1.2
+
+### Patch Changes
+
+- e7a8516: Fix publishing
+
 ## 0.1.1
 
 ### Patch Changes
