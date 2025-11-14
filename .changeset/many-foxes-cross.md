@@ -1,5 +1,0 @@
----
-'ghui': minor
----
-
-Initial release
