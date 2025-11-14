@@ -19,7 +19,6 @@ jobs:
         uses: changesets/action@v1
         with:
           version: bun changeset version
-          commit: 'chore: version packages'
-          title: 'chore: version packages'
+          publish: echo 'ok'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
