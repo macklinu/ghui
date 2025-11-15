@@ -9,14 +9,12 @@ import invariant from 'tiny-invariant'
 import { Loading } from './Loading'
 import * as Queries from './Queries'
 import * as RQE from './ReactQueryEffect'
+import { useCurrentRepo } from './RepoProvider'
 
 export const Issues = () => {
-  const repo = RQE.useQuery(Queries.currentDirectoryRepo())
-  const issues = RQE.useQuery(
-    Queries.issues({
-      repo: Option.none(),
-    })
-  )
+  const orgRepo = useCurrentRepo()
+  const repo = RQE.useQuery(Queries.getRepo(orgRepo))
+  const issues = RQE.useQuery(Queries.issues({ repo: orgRepo }))
 
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<
     Option.Option<number>

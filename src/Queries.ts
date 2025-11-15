@@ -12,9 +12,15 @@ export const currentDirectoryRepo = () =>
     queryFn: () => AppRuntime.runPromiseExit(Repo.currentRepo),
   })
 
+export const getRepo = (orgRepo: Option.Option<string>) =>
+  RQE.queryOptions({
+    queryKey: ['repo', orgRepo] as const,
+    queryFn: () => AppRuntime.runPromiseExit(Repo.get(orgRepo)),
+  })
+
 export const pullRequests = (options: {
   author: Option.Option<string>
-  repo: Option.Option<{ owner: string; name: string }>
+  repo: Option.Option<string>
 }) =>
   RQE.queryOptions({
     queryKey: ['pulls', options] as const,
@@ -37,9 +43,7 @@ export const pullRequestReadme = (options: {
   })
 }
 
-export const issues = (options: {
-  repo: Option.Option<{ owner: string; name: string }>
-}) =>
+export const issues = (options: { repo: Option.Option<string> }) =>
   RQE.queryOptions({
     queryKey: ['issues', options] as const,
     queryFn: () => AppRuntime.runPromiseExit(GitHub.Issues.list(options)),

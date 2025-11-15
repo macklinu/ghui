@@ -1,4 +1,6 @@
+import * as BunContext from '@effect/platform-bun/BunContext'
 import * as Command from '@effect/platform/Command'
+import * as Array from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
@@ -35,5 +37,28 @@ export class Repo extends Effect.Service<Repo>()('ghui/Repo', {
         Effect.catchAll(() => Effect.succeed(Option.none<string>()))
       )
     }),
+    get: Effect.fn(function* (orgRepo: Option.Option<string>) {
+      const [gh, ...args] = [
+        'gh',
+        'repo',
+        'view',
+        ...Option.map(orgRepo, (repo) => [repo]).pipe(
+          Option.getOrElse(() => Array.empty<string>())
+        ),
+        '--json',
+        Struct.keys(Repository.fields).join(','),
+      ] as const
+
+      const command = Command.make(gh, ...args)
+
+      return yield* Command.string(command).pipe(
+        Effect.flatMap(
+          Schema.decodeUnknown(Schema.compose(Schema.parseJson(), Repository))
+        ),
+        Effect.map(({ nameWithOwner }) => Option.some(nameWithOwner)),
+        Effect.catchAll(() => Effect.succeed(Option.none<string>()))
+      )
+    }),
   }),
+  dependencies: [BunContext.layer],
 }) {}

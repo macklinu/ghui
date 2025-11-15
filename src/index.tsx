@@ -28,6 +28,7 @@ import { Issues } from './Issues'
 import { Keybindings } from './Keybindings'
 import { PullRequests } from './PullRequests'
 import * as Queries from './Queries'
+import { RepoProvider, useCurrentRepo } from './RepoProvider'
 import { SplashScreen } from './SplashScreen'
 import * as View from './View'
 
@@ -61,7 +62,7 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
     Option.getOrElse(initialView, () => View.SplashScreen())
   )
 
-  useQuery(Queries.currentDirectoryRepo())
+  useQuery(Queries.getRepo(useCurrentRepo()))
 
   const { dialog, showDialog, closeDialog } = useCurrentDialog()
 
@@ -134,7 +135,13 @@ const createQueryClient = () =>
   })
 
 const renderApp = (
-  props: ComponentProps<typeof App> = { view: Option.none() }
+  {
+    repo,
+    ...props
+  }: ComponentProps<typeof App> & { repo: Option.Option<string> } = {
+    view: Option.none(),
+    repo: Option.none(),
+  }
 ) =>
   Effect.tryPromise(async () => {
     const renderer = await createCliRenderer({
@@ -147,7 +154,9 @@ const renderApp = (
 
     return createRoot(renderer).render(
       <QueryClientProvider client={createQueryClient()}>
-        <App {...props} />
+        <RepoProvider repo={repo}>
+          <App {...props} />
+        </RepoProvider>
       </QueryClientProvider>
     )
   })
@@ -161,9 +170,18 @@ const ghuiPrs = Command.make(
       Options.withSchema(Schema.String),
       Options.optional
     ),
+    repo: Options.text('repo').pipe(
+      Options.withSchema(
+        Schema.String.pipe(Schema.pattern(/^\w[\w.-]*\/\w[\w.-]*$/))
+      ),
+      Options.withDescription(
+        'The repo in org/repo format to set as the current repo context'
+      ),
+      Options.optional
+    ),
   },
-  ({ author }) =>
-    renderApp({ view: Option.some(View.PullRequests({ author })) })
+  ({ author, repo }) =>
+    renderApp({ view: Option.some(View.PullRequests({ author })), repo })
 )
 
 const cli = Command.run(ghui.pipe(Command.withSubcommands([ghuiPrs])), {

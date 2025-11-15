@@ -9,19 +9,21 @@ import invariant from 'tiny-invariant'
 import { Loading } from './Loading'
 import * as Queries from './Queries'
 import * as RQE from './ReactQueryEffect'
+import { useCurrentRepo } from './RepoProvider'
 
 export const PullRequests = ({
   author: initialAuthor,
 }: {
   author: Option.Option<string>
 }) => {
+  const orgRepo = useCurrentRepo()
   // TODO filter author?
   const [author, _setAuthor] = useState<Option.Option<string>>(initialAuthor)
-  const repo = RQE.useQuery(Queries.currentDirectoryRepo())
+  const repo = RQE.useQuery(Queries.getRepo(orgRepo))
   const pulls = RQE.useQuery(
     Queries.pullRequests({
       author,
-      repo: Option.none(),
+      repo: orgRepo,
     })
   )
 

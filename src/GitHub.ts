@@ -44,13 +44,13 @@ export class PullRequests extends Effect.Service<PullRequests>()(
         repo,
       }: {
         author: Option.Option<string>
-        repo: Option.Option<{ owner: string; name: string }>
+        repo: Option.Option<string>
       }) {
         const [gh, ...args] = [
           'gh',
           'api',
           Option.match(repo, {
-            onSome: (repo) => `repos/${repo.owner}/${repo.name}/pulls`,
+            onSome: (repo) => `repos/${repo}/pulls`,
             onNone: () => `repos/{owner}/{repo}/pulls`,
           }),
           '--paginate',
@@ -113,13 +113,13 @@ export class Issues extends Effect.Service<Issues>()('ghui/GitHub/Issues', {
     list: Effect.fn('Issues.list')(function* ({
       repo,
     }: {
-      repo: Option.Option<{ owner: string; name: string }>
+      repo: Option.Option<string>
     }) {
       const [gh, ...args] = [
         'gh',
         'api',
         Option.match(repo, {
-          onSome: (repo) => `repos/${repo.owner}/${repo.name}/issues`,
+          onSome: (orgRepo) => `repos/${orgRepo}/issues`,
           onNone: () => `repos/{owner}/{repo}/issues`,
         }),
         '--paginate',
