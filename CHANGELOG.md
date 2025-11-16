@@ -1,5 +1,11 @@
 # ghui
 
+## 0.2.1
+
+### Patch Changes
+
+- 2e95c27: Fix splash screen commands
+
 ## 0.2.0
 
 ### Minor Changes
