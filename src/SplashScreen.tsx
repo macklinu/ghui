@@ -8,8 +8,8 @@ If you're here, it's because you ran \`ghui\` without any arguments _and_ you ar
 
 Here's how to remedy this:
 
-- Run \`ghui\` in a repo that has been pushed to GitHub.
-- Run \`ghui --repo macklinu/ghui\` from any directory, where \`--repo owner/name\` sets the default repo context for all commands.
+- Run \`ghui prs\` in a repo that has been pushed to GitHub.
+- Run \`ghui prs --repo macklinu/ghui\` from any directory, where \`--repo owner/name\` sets the default repo context for all commands.
 - Run a command that doesn't depend on current repo context, like \`ghui prs --author @me\` to see all of your open PRs.
 `.replaceAll(/\\/g, '')
 
