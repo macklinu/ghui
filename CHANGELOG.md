@@ -1,5 +1,11 @@
 # ghui
 
+## 0.2.2
+
+### Patch Changes
+
+- 203bef1: Update dependencies
+
 ## 0.2.1
 
 ### Patch Changes
