@@ -10,6 +10,7 @@ export const AppRuntime = ManagedRuntime.make(
     Repo.Repo.Default,
     GitHub.Issues.Default,
     GitHub.PullRequests.Default,
+    GitHub.PullRequest.Default,
     BunContext.layer
   )
 )

@@ -1,38 +1,55 @@
+import * as BunContext from '@effect/platform-bun/BunContext'
 import * as Command from '@effect/platform/Command'
+import { pipe } from 'effect'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
+import * as Stream from 'effect/Stream'
+import * as String from 'effect/String'
 
-class User extends Schema.Class<User>('User')({
-  id: Schema.Number,
-  login: Schema.String,
-}) {}
+import * as CommandArgs from './CommandArgs'
+import * as GitHubApiSchema from './GitHubApiSchema'
 
-class PullRequest extends Schema.Class<PullRequest>('PullRequest')({
-  user: User,
-  created_at: Schema.DateTimeUtc,
-  head: Schema.Struct({
-    repo: Schema.Struct({
-      name: Schema.String,
-      owner: Schema.Struct({
-        login: Schema.String,
-      }),
-    }),
-  }),
-  base: Schema.Struct({
-    repo: Schema.Struct({
-      name: Schema.String,
-      owner: Schema.Struct({
-        login: Schema.String,
-      }),
-    }),
-  }),
-  id: Schema.Number,
-  draft: Schema.Boolean,
-  number: Schema.Number,
-  state: Schema.String,
-  title: Schema.String,
-}) {}
+export class PermissionError extends Data.TaggedError(
+  'ghui/GitHub/PermissionError'
+)<{}> {}
+
+export class UnknownError extends Data.TaggedError('ghui/GitHub/UnknownError')<{
+  readonly message: string
+}> {}
+
+const runString = <E, R>(
+  stream: Stream.Stream<Uint8Array, E, R>
+): Effect.Effect<string, E, R> =>
+  stream.pipe(Stream.decodeText(), Stream.runFold(String.empty, String.concat))
+
+const runCommand = Effect.fn(function* (command: Command.Command) {
+  const [exitCode, stdout, stderr] = yield* pipe(
+    // Start running the command and return a handle to the running process
+    Command.start(command),
+    Effect.flatMap((process) =>
+      Effect.all(
+        [
+          // Waits for the process to exit and returns
+          // the ExitCode of the command that was run
+          process.exitCode,
+          // The standard output stream of the process
+          runString(process.stdout),
+          // The standard error stream of the process
+          runString(process.stderr),
+        ],
+        { concurrency: 3 }
+      )
+    )
+  )
+
+  if (exitCode === 0) {
+    return yield* Effect.succeed(stdout)
+  } else {
+    return yield* Effect.fail(new UnknownError({ message: stderr }))
+  }
+})
 
 export class PullRequests extends Effect.Service<PullRequests>()(
   'ghui/GitHub/PullRequests',
@@ -46,20 +63,25 @@ export class PullRequests extends Effect.Service<PullRequests>()(
         author: Option.Option<string>
         repo: Option.Option<string>
       }) {
-        const [gh, ...args] = [
-          'gh',
-          'api',
-          Option.match(repo, {
-            onSome: (repo) => `repos/${repo}/pulls`,
-            onNone: () => `repos/{owner}/{repo}/pulls`,
-          }),
-          '--paginate',
-        ] as const
+        const args = yield* CommandArgs.builder()
+          .append(
+            'gh',
+            'api',
+            Option.match(repo, {
+              onSome: (repo) => `repos/${repo}/pulls`,
+              onNone: () => `repos/{owner}/{repo}/pulls`,
+            }),
+            '--paginate'
+          )
+          .build()
 
-        const result = yield* Command.make(gh, ...args).pipe(Command.string)
+        const result = yield* CommandArgs.toCommand(args).pipe(Command.string)
 
         const response = yield* Schema.decodeUnknown(
-          Schema.compose(Schema.parseJson(), Schema.Array(PullRequest))
+          Schema.compose(
+            Schema.parseJson(),
+            Schema.Array(GitHubApiSchema.PullRequest)
+          )
         )(result)
 
         return Option.match(author, {
@@ -67,45 +89,66 @@ export class PullRequests extends Effect.Service<PullRequests>()(
           onNone: () => response,
         })
       }),
-
-      readme: Effect.fn('PullRequests.readme')(function* ({
-        number,
-      }: {
-        number: number
-      }) {
-        const args = [
-          'gh',
-          'pr',
-          'view',
-          '--json',
-          'body',
-          number.toString(),
-        ] as const
-
-        const jsonString = yield* Command.string(Command.make(...args))
-
-        const readme = yield* Schema.decodeUnknown(
-          Schema.compose(
-            Schema.parseJson(),
-            Schema.Struct({ body: Schema.String })
-          )
-        )(jsonString)
-
-        return readme.body
-      }),
     }),
+    dependencies: [BunContext.layer],
   }
 ) {}
 
-class Issue extends Schema.Class<Issue>('Issue')({
-  user: User,
-  created_at: Schema.DateTimeUtc,
-  id: Schema.Number,
-  number: Schema.Number,
-  title: Schema.String,
-  body: Schema.OptionFromNullOr(Schema.String),
-  pull_request: Schema.OptionFromNullOr(Schema.Unknown),
-}) {}
+export class PullRequest extends Effect.Service<PullRequest>()(
+  'ghui/GitHub/PullRequest',
+  {
+    accessors: true,
+    sync: () => ({
+      markdownDescription: Effect.fn('PullRequest.markdownDescription')(
+        function* ({ number }: { number: number }) {
+          const args = yield* CommandArgs.builder()
+            .append('gh', 'pr', 'view', '--json', 'body', number)
+            .build()
+
+          const jsonString = yield* Command.string(CommandArgs.toCommand(args))
+
+          const readme = yield* Schema.decodeUnknown(
+            Schema.compose(
+              Schema.parseJson(),
+              Schema.Struct({ body: Schema.String })
+            )
+          )(jsonString)
+
+          return readme.body
+        }
+      ),
+      updateBranch: Effect.fn('PullRequest.updateBranch')(function* ({
+        number,
+        repo,
+        type = 'merge',
+      }: {
+        number: number
+        repo: string
+        type?: 'rebase' | 'merge'
+      }) {
+        const args = yield* CommandArgs.builder()
+          .append('gh', 'pr', 'update-branch', number, '--repo', repo)
+          .appendIf(type === 'rebase', () => '--rebase')
+          .build()
+
+        return yield* CommandArgs.toCommand(args).pipe(
+          runCommand,
+          Effect.mapError((error) => {
+            if (error._tag === 'ghui/GitHub/UnknownError') {
+              if (
+                /does not have the correct permissions/i.test(error.message)
+              ) {
+                return new PermissionError()
+              }
+            }
+            return error
+          })
+        )
+      }),
+    }),
+    dependencies: [BunContext.layer],
+  }
+) {}
 
 export class Issues extends Effect.Service<Issues>()('ghui/GitHub/Issues', {
   accessors: true,
@@ -115,23 +158,26 @@ export class Issues extends Effect.Service<Issues>()('ghui/GitHub/Issues', {
     }: {
       repo: Option.Option<string>
     }) {
-      const [gh, ...args] = [
-        'gh',
-        'api',
-        Option.match(repo, {
-          onSome: (orgRepo) => `repos/${orgRepo}/issues`,
-          onNone: () => `repos/{owner}/{repo}/issues`,
-        }),
-        '--paginate',
-      ] as const
+      const args = yield* CommandArgs.builder()
+        .append(
+          'gh',
+          'api',
+          Option.match(repo, {
+            onSome: (orgRepo) => `repos/${orgRepo}/issues`,
+            onNone: () => `repos/{owner}/{repo}/issues`,
+          }),
+          '--paginate'
+        )
+        .build()
 
-      const result = yield* Command.make(gh, ...args).pipe(Command.string)
+      const result = yield* CommandArgs.toCommand(args).pipe(Command.string)
 
       const response = yield* Schema.decodeUnknown(
-        Schema.compose(Schema.parseJson(), Schema.Array(Issue))
+        Schema.compose(Schema.parseJson(), Schema.Array(GitHubApiSchema.Issue))
       )(result)
 
       return response.filter((issue) => Option.isNone(issue.pull_request))
     }),
+    dependencies: [BunContext.layer],
   }),
 }) {}

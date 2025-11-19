@@ -27,16 +27,16 @@ export const pullRequests = (options: {
     queryFn: () => AppRuntime.runPromiseExit(GitHub.PullRequests.list(options)),
   })
 
-export const pullRequestReadme = (options: {
+export const pullRequestMarkdownDescription = (options: {
   number: Option.Option<number>
   repo: Option.Option<string>
 }) => {
   return RQE.queryOptions({
-    queryKey: ['pull', options],
+    queryKey: ['pull', options, 'markdownDescription'],
     queryFn: Option.match(options.number, {
       onSome: (number) => () =>
         AppRuntime.runPromiseExit(
-          GitHub.PullRequests.readme({ ...options, number })
+          GitHub.PullRequest.markdownDescription({ ...options, number })
         ),
       onNone: () => skipToken,
     }),

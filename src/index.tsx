@@ -20,6 +20,7 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import { useCallback, useState, type ComponentProps } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { version } from '../package.json'
 import * as Dialog from './Dialog'
@@ -30,6 +31,7 @@ import { PullRequests } from './PullRequests'
 import * as Queries from './Queries'
 import { RepoProvider, useCurrentRepo } from './RepoProvider'
 import { SplashScreen } from './SplashScreen'
+import { useToast } from './Toast'
 import * as View from './View'
 
 const useCurrentDialog = () => {
@@ -69,6 +71,8 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
   const app = useAppContext()
 
   const dimensions = useTerminalDimensions()
+
+  const toasts = useToast(useShallow((state) => state.toasts))
 
   useKeyboard((key) => {
     if (key.name === 'p') {
@@ -116,11 +120,41 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
         DialogKind.$match({
           Keybindings: () => (
             <Dialog.Component onClose={closeDialog}>
-              <Keybindings />
+              <Keybindings view={view} />
             </Dialog.Component>
           ),
         })
       ).pipe(Option.getOrNull)}
+      <box
+        position='absolute'
+        bottom={0}
+        right={0}
+        flexDirection='column-reverse'
+        maxWidth={64}
+      >
+        {toasts.map((toast) => {
+          const toastKindToIcon = {
+            success: '✅',
+            danger: '⛔️',
+            warning: '⚠️',
+          } as const
+          return (
+            <box
+              border
+              borderColor='gray'
+              borderStyle='rounded'
+              key={toast.id}
+              flexDirection='row'
+              gap={1}
+              alignItems='flex-start'
+              overflow='hidden'
+            >
+              <text>{toastKindToIcon[toast.kind]}</text>
+              <text>{toast.message}</text>
+            </box>
+          )
+        })}
+      </box>
     </box>
   )
 }

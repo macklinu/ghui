@@ -68,7 +68,7 @@ export const Issues = () => {
         )}
       </box>
       <box flexDirection='row'>
-        <box minWidth={48} border borderColor='gray'>
+        <box minWidth={48} border borderStyle='rounded' borderColor='gray'>
           {Match.value(issues).pipe(
             Match.when({ isLoading: true }, () => <Loading kind='dots' />),
             Match.when({ isSuccess: true }, ({ data: issues }) => (
@@ -94,6 +94,7 @@ export const Issues = () => {
           flexGrow={1}
           height='100%'
           border
+          borderStyle='rounded'
           borderColor='gray'
           paddingLeft={2}
           paddingRight={2}

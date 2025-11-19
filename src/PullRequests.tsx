@@ -1,15 +1,23 @@
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
+import { pipe } from 'effect'
+import * as Cause from 'effect/Cause'
 import * as DateTime from 'effect/DateTime'
+import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import invariant from 'tiny-invariant'
 
+import * as GitHub from './GitHub'
 import { Loading } from './Loading'
 import * as Queries from './Queries'
 import * as RQE from './ReactQueryEffect'
 import { useCurrentRepo } from './RepoProvider'
+import { AppRuntime } from './Runtime'
+import { useToast } from './Toast'
+
+const elementOrder = ['list', 'detail'] as const
 
 export const PullRequests = ({
   author: initialAuthor,
@@ -26,6 +34,9 @@ export const PullRequests = ({
       repo: orgRepo,
     })
   )
+
+  const [elementFocusIndex, setElementFocusIndex] = useState(0)
+  const focusedElement = elementOrder[elementFocusIndex % elementOrder.length]
 
   const [selectedPrNumber, setSelectedPrNumber] = useState<
     Option.Option<number>
@@ -44,18 +55,81 @@ export const PullRequests = ({
     }
   }, [pulls.isSuccess, pulls.data])
 
-  const readme = RQE.useQuery(
-    Queries.pullRequestReadme({
+  const description = RQE.useQuery(
+    Queries.pullRequestMarkdownDescription({
       number: selectedPrNumber,
       repo: Option.none(),
     })
   )
 
-  const shiftFocus = useCallback(() => {}, [])
+  const showToast = useToast((state) => state.showToast)
+
+  const updateBranch = RQE.useMutation({
+    mutationFn: (input: {
+      repo: string
+      number: number
+      type: 'rebase' | 'merge'
+    }) =>
+      AppRuntime.runPromiseExit(
+        GitHub.PullRequest.updateBranch(input).pipe(Effect.scoped)
+      ),
+    onSuccess(_, { repo, number, type }) {
+      showToast({
+        kind: 'success',
+        message: `${repo}#${number} updated with ${type}`,
+      })
+    },
+    onError(error, { repo, number }) {
+      const message = pipe(
+        error.cause,
+        Cause.map((e) =>
+          Match.value(e).pipe(
+            Match.when(
+              Match.instanceOf(GitHub.PermissionError),
+              () => `No permission to update ${repo}#${number}`
+            ),
+            Match.orElse(() => `Unable to update ${repo}#${number}`)
+          )
+        ),
+        Cause.pretty
+      )
+
+      console.log(error)
+
+      showToast({ kind: 'danger', message })
+    },
+  })
 
   useKeyboard((key) => {
     if (key.name === 'tab') {
-      shiftFocus()
+      const direction = key.shift ? -1 : 1
+      setElementFocusIndex((prev) => prev + direction)
+    }
+    if (key.name === 'm' && key.shift) {
+      Match.value([repo, selectedPrNumber]).pipe(
+        Match.when(
+          [{ isSuccess: true, data: Option.isSome }, Option.isSome],
+          ([repo, number]) =>
+            updateBranch.mutate({
+              repo: repo.data.value,
+              number: number.value,
+              type: 'merge',
+            })
+        )
+      )
+    }
+    if (key.name === 'r' && key.shift) {
+      Match.value([repo, selectedPrNumber]).pipe(
+        Match.when(
+          [{ isSuccess: true, data: Option.isSome }, Option.isSome],
+          ([repo, number]) =>
+            updateBranch.mutate({
+              repo: repo.data.value,
+              number: number.value,
+              type: 'rebase',
+            })
+        )
+      )
     }
   })
 
@@ -82,12 +156,17 @@ export const PullRequests = ({
         )}
       </box>
       <box flexDirection='row'>
-        <box minWidth={48} border borderColor='gray'>
+        <box
+          minWidth={48}
+          border
+          borderStyle='rounded'
+          borderColor={focusedElement === 'list' ? 'white' : 'gray'}
+        >
           {Match.value(pulls).pipe(
             Match.when({ isLoading: true }, () => <Loading kind='dots' />),
             Match.when({ isSuccess: true }, ({ data: prs }) => (
               <select
-                focused
+                focused={focusedElement === 'list'}
                 height='100%'
                 options={prs.map((pr) => ({
                   name: pr.title,
@@ -95,6 +174,7 @@ export const PullRequests = ({
                   description: `#${pr.number} | ${pr.user.login} | ${DateTime.format(pr.created_at)}`,
                 }))}
                 onChange={(index, option) => {
+                  if (prs.length === 0) return
                   invariant(option)
                   invariant(typeof option.value === 'number')
                   setSelectedPrNumber(Option.some(option.value))
@@ -108,9 +188,12 @@ export const PullRequests = ({
           flexGrow={1}
           height='100%'
           border
+          borderStyle='rounded'
           borderColor='gray'
           paddingLeft={2}
           paddingRight={2}
+          focused={focusedElement === 'detail'}
+          focusedBorderColor='white'
         >
           <box marginBottom={1} gap={1} flexDirection='row'>
             {Option.map(selectedPr, (pr) => (
@@ -125,7 +208,7 @@ export const PullRequests = ({
             )).pipe(Option.getOrNull)}
           </box>
 
-          {Match.value(readme).pipe(
+          {Match.value(description).pipe(
             Match.when({ isLoading: true }, () => <Loading kind='dots' />),
             Match.when({ status: 'success' }, ({ data }) =>
               data.length > 0 ? (
