@@ -118,9 +118,8 @@ export interface UseEffectMutationOptions<
 export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
   options: UseEffectMutationOptions<A, E, TVariables, TOnMutateResult>
 ): RQ.UseMutationResult<A, Exit.Failure<A, E>, TVariables, TOnMutateResult> => {
-  const { mutationFn, onSuccess, onError, ...restOptions } = options
+  const { mutationFn, onSuccess, ...restOptions } = options
 
-  // Wrap mutationFn to convert Exit.Failure to thrown error for react-query
   const wrappedMutationFn = async (
     variables: TVariables
   ): Promise<Exit.Exit<A, E>> => {
@@ -141,21 +140,13 @@ export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
     ...restOptions,
     mutationFn: wrappedMutationFn,
     onSuccess(data, variables, onMutateResult, context) {
-      // data is Exit.Success<A, E> here because we threw failures
       if (Exit.isSuccess(data)) {
         onSuccess?.(data.value, variables, onMutateResult, context)
       }
     },
-    onError(error, variables, onMutateResult, context) {
-      // error is Exit.Failure<A, E> here
-      onError?.(error, variables, onMutateResult, context)
-    },
   })
 
-  // Unwrap the Exit from the result
-  // When isSuccess is true, data is Exit.Success<A, E> (because we threw failures)
   if (result.isSuccess && result.data) {
-    // TypeScript doesn't know that data is Exit.Success, so we check
     if (Exit.isSuccess(result.data)) {
       return {
         ...result,
@@ -169,8 +160,6 @@ export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
     }
   }
 
-  // When isError is true, error is Exit.Failure<A, E> (the thrown value)
-  // The result already has the correct structure, we just need to assert the type
   return result as RQ.UseMutationResult<
     A,
     Exit.Failure<A, E>,

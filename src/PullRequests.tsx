@@ -82,8 +82,8 @@ export const PullRequests = ({
     onError(error, { repo, number }) {
       const message = pipe(
         error.cause,
-        Cause.map((e) =>
-          Match.value(e).pipe(
+        Cause.map((error) =>
+          Match.value(error).pipe(
             Match.when(
               Match.instanceOf(GitHub.PermissionError),
               () => `No permission to update ${repo}#${number}`
@@ -93,8 +93,6 @@ export const PullRequests = ({
         ),
         Cause.pretty
       )
-
-      console.log(error)
 
       showToast({ kind: 'danger', message })
     },

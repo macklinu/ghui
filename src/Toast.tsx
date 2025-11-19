@@ -10,21 +10,19 @@ interface Toast {
 export const useToast = create<{
   toasts: Toast[]
   showToast: (toast: Omit<Toast, 'id'>) => Toast['id']
-  removeToast: (toastId: string) => void
-}>()((set) => ({
-  toasts: [],
-  showToast: (toast) => {
-    const id = Bun.randomUUIDv7()
-    set(({ toasts }) => ({ toasts: [...toasts, { id, ...toast }] }))
-    setTimeout(() => {
-      set(({ toasts }) => ({
-        toasts: toasts.filter((toast) => toast.id !== id),
-      }))
-    }, toast.duration ?? 5000)
-    return id
-  },
-  removeToast: (toastId) =>
+}>()((set) => {
+  const removeToast = (toastId: Toast['id']) =>
     set(({ toasts }) => ({
       toasts: toasts.filter((toast) => toast.id !== toastId),
-    })),
-}))
+    }))
+
+  return {
+    toasts: [],
+    showToast: (toast) => {
+      const id = Bun.randomUUIDv7()
+      set(({ toasts }) => ({ toasts: [...toasts, { id, ...toast }] }))
+      setTimeout(() => removeToast(id), toast.duration ?? 5000)
+      return id
+    },
+  }
+})

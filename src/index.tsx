@@ -147,7 +147,6 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
               flexDirection='row'
               gap={1}
               alignItems='flex-start'
-              overflow='hidden'
             >
               <text>{toastKindToIcon[toast.kind]}</text>
               <text>{toast.message}</text>
