@@ -6,14 +6,14 @@
       "name": "ghui",
       "dependencies": {
         "@effect/cli": "^0.72.1",
-        "@effect/platform": "^0.93.6",
+        "@effect/platform": "^0.93.7",
         "@effect/platform-bun": "^0.86.0",
         "@opentui/core": "^0.1.60",
         "@opentui/react": "^0.1.60",
         "@tanstack/react-query": "^5.90.12",
         "cli-spinners": "^3.3.0",
         "effect": "^3.19.11",
-        "react": "^19.2.1",
+        "react": "^19.2.3",
         "tiny-invariant": "^1.3.3",
         "zustand": "^5.0.9",
       },
@@ -99,7 +99,7 @@
 
     "@effect/language-service": ["@effect/language-service@0.62.1", "", { "bin": { "effect-language-service": "cli.js" } }, "sha512-K78mPtNpHqArLTXpYNASoqiqYUmPASrdnntSBVInMYmI39hyLkmTqk78bclzkfsIvJZBBS4vvsuWx7Etmz8rkA=="],
 
-    "@effect/platform": ["@effect/platform@0.93.6", "", { "dependencies": { "find-my-way-ts": "^0.1.6", "msgpackr": "^1.11.4", "multipasta": "^0.2.7" }, "peerDependencies": { "effect": "^3.19.8" } }, "sha512-I5lBGQWzWXP4zlIdPs7z7WHmEFVBQhn+74emr/h16GZX96EEJ6I1rjGaKyZF7mtukbMuo9wEckDPssM8vskZ/w=="],
+    "@effect/platform": ["@effect/platform@0.93.7", "", { "dependencies": { "find-my-way-ts": "^0.1.6", "msgpackr": "^1.11.4", "multipasta": "^0.2.7" }, "peerDependencies": { "effect": "^3.19.11" } }, "sha512-kdF5qAGOz1hotfh9lws/cdBO6q0JT7d+V/u9OvBJsocnV3EbMKlVDXEHNg8Wv6ZLgFs0T1AA/NBF+Hks9eZVkA=="],
 
     "@effect/platform-bun": ["@effect/platform-bun@0.86.0", "", { "dependencies": { "@effect/platform-node-shared": "^0.56.0", "multipasta": "^0.2.7" }, "peerDependencies": { "@effect/cluster": "^0.55.0", "@effect/platform": "^0.93.6", "@effect/rpc": "^0.72.2", "@effect/sql": "^0.48.6", "effect": "^3.19.8" } }, "sha512-wg6eyzIxHuOd87rHjR18T7DjOtQ0dz8/cQD/pvZo8xFBSZ0AoZXqkHOKuU34DIRA4tp+BdBP6wjDDQYNQK/agQ=="],
 
@@ -535,7 +535,7 @@
 
     "queue-microtask": ["queue-microtask@1.2.3", "", {}, "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A=="],
 
-    "react": ["react@19.2.1", "", {}, "sha512-DGrYcCWK7tvYMnWh79yrPHt+vdx9tY+1gPZa7nJQtO/p8bLTDaHp4dzwEhQB7pZ4Xe3ok4XKuEPrVuc+wlpkmw=="],
+    "react": ["react@19.2.3", "", {}, "sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA=="],
 
     "react-reconciler": ["react-reconciler@0.32.0", "", { "dependencies": { "scheduler": "^0.26.0" }, "peerDependencies": { "react": "^19.1.0" } }, "sha512-2NPMOzgTlG0ZWdIf3qG+dcbLSoAc/uLfOwckc3ofy5sSK0pLJqnQLpUFxvGcN2rlXSjnVtGeeFLNimCQEj5gOQ=="],
 
