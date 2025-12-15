@@ -1,5 +1,11 @@
 # ghui
 
+## 0.3.1
+
+### Patch Changes
+
+- 954a814: Migrate to effect-atom/atom-react
+
 ## 0.3.0
 
 ### Minor Changes
