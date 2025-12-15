@@ -1,3 +1,4 @@
+import { Atom } from '@effect-atom/atom-react'
 import * as BunContext from '@effect/platform-bun/BunContext'
 import * as Command from '@effect/platform/Command'
 import * as Array from 'effect/Array'
@@ -57,4 +58,14 @@ export class Repo extends Effect.Service<Repo>()('ghui/Repo', {
     }),
   }),
   dependencies: [BunContext.layer],
-}) {}
+}) {
+  static readonly runtime = Atom.runtime(Repo.Default)
+
+  static readonly currentRepoAtom = Repo.runtime.atom(
+    Repo.currentRepo.pipe(Effect.provide(BunContext.layer))
+  )
+
+  static readonly getRepoAtom = Atom.family((orgRepo: Option.Option<string>) =>
+    Repo.runtime.atom(Repo.get(orgRepo).pipe(Effect.provide(BunContext.layer)))
+  )
+}

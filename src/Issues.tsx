@@ -1,3 +1,4 @@
+import { Result, useAtomValue } from '@effect-atom/atom-react'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import * as DateTime from 'effect/DateTime'
@@ -6,29 +7,30 @@ import * as Option from 'effect/Option'
 import { useCallback, useEffect, useState } from 'react'
 import invariant from 'tiny-invariant'
 
+import * as GitHub from './GitHub'
 import { Loading } from './Loading'
-import * as Queries from './Queries'
-import * as RQE from './ReactQueryEffect'
+import { Repo } from './Repo'
 import { useCurrentRepo } from './RepoProvider'
 
 export const Issues = () => {
   const orgRepo = useCurrentRepo()
-  const repo = RQE.useQuery(Queries.getRepo(orgRepo))
-  const issues = RQE.useQuery(Queries.issues({ repo: orgRepo }))
+
+  const repo = useAtomValue(Repo.getRepoAtom(orgRepo))
+  const issues = useAtomValue(GitHub.Issues.listAtom(orgRepo))
 
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<Option.Option<number>>(
     Option.none()
   )
 
   useEffect(() => {
-    if (issues.isSuccess) {
-      setSelectedIssueNumber(Option.fromNullable(issues.data[0]?.number))
+    if (Result.isSuccess(issues)) {
+      setSelectedIssueNumber(Option.fromNullable(issues.value[0]?.number))
     }
-  }, [issues.isSuccess, issues.data])
+  }, [issues])
 
   const selectedIssue = Match.value([issues, selectedIssueNumber]).pipe(
-    Match.when([{ isSuccess: true }, Option.isSome], ([{ data }, issueNumber]) =>
-      Option.fromNullable(data.find((issue) => issue.number === issueNumber.value))
+    Match.when([Result.isSuccess, Option.isSome], ([{ value: issues }, issueNumber]) =>
+      Option.fromNullable(issues.find((issue) => issue.number === issueNumber.value))
     ),
     Match.orElse(() => Option.none())
   )
@@ -45,29 +47,33 @@ export const Issues = () => {
     <box padding={1} flexDirection='column'>
       <ascii-font text='ghui' font='tiny' marginBottom={2} />
       <box flexDirection='row' alignItems='center' gap={1}>
-        {Match.value(repo).pipe(
-          Match.when({ isLoading: true }, () => <Loading kind='dots' />),
-          Match.when({ isSuccess: true }, ({ data: repo }) => (
-            <>
-              <text>{Option.getOrThrow(repo)}</text>
-              <text>{'→'}</text>
-              <text>issues</text>
-              {Option.isSome(selectedIssueNumber) && (
+        {Result.builder(repo)
+          .onWaiting(() => <Loading kind='dots' />)
+          .onSuccess(
+            Option.match({
+              onSome: (data) => (
                 <>
+                  <text>{data}</text>
                   <text>{'→'}</text>
-                  <text>#{selectedIssueNumber.value}</text>
+                  <text>issues</text>
+                  {Option.isSome(selectedIssueNumber) && (
+                    <>
+                      <text>{'→'}</text>
+                      <text>#{selectedIssueNumber.value}</text>
+                    </>
+                  )}
                 </>
-              )}
-            </>
-          )),
-          Match.orElse(() => null)
-        )}
+              ),
+              onNone: () => null,
+            })
+          )
+          .orNull()}
       </box>
       <box flexDirection='row'>
         <box minWidth={48} border borderStyle='rounded' borderColor='gray'>
           {Match.value(issues).pipe(
-            Match.when({ isLoading: true }, () => <Loading kind='dots' />),
-            Match.when({ isSuccess: true }, ({ data: issues }) => (
+            Match.when(Result.isWaiting, () => <Loading kind='dots' />),
+            Match.when(Result.isSuccess, ({ value: issues }) => (
               <select
                 focused
                 height='100%'
@@ -108,8 +114,8 @@ export const Issues = () => {
             )).pipe(Option.getOrNull)}
           </box>
           <text>
-            {Match.value(issues).pipe(
-              Match.when({ isSuccess: true }, ({ data }) =>
+            {Result.builder(issues)
+              .onSuccess((data) =>
                 Option.match(selectedIssueNumber, {
                   onNone: () => null,
                   onSome: (selectedIssueNumber) =>
@@ -117,9 +123,8 @@ export const Issues = () => {
                       .find((issue) => issue.number === selectedIssueNumber)
                       ?.body.pipe(Option.getOrElse(() => null)) ?? null,
                 })
-              ),
-              Match.orElse(() => null)
-            )}
+              )
+              .orNull()}
           </text>
         </scrollbox>
       </box>

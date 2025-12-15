@@ -1,9 +1,8 @@
+import { Result, useAtomSet, useAtomValue } from '@effect-atom/atom-react'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
-import { pipe } from 'effect'
-import * as Cause from 'effect/Cause'
 import * as DateTime from 'effect/DateTime'
-import * as Effect from 'effect/Effect'
+import * as Exit from 'effect/Exit'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import { useEffect, useState } from 'react'
@@ -11,10 +10,8 @@ import invariant from 'tiny-invariant'
 
 import * as GitHub from './GitHub'
 import { Loading } from './Loading'
-import * as Queries from './Queries'
-import * as RQE from './ReactQueryEffect'
+import { Repo } from './Repo'
 import { useCurrentRepo } from './RepoProvider'
-import { AppRuntime } from './Runtime'
 import { useToast } from './Toast'
 
 const elementOrder = ['list', 'detail'] as const
@@ -22,14 +19,10 @@ const elementOrder = ['list', 'detail'] as const
 export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<string> }) => {
   const orgRepo = useCurrentRepo()
   // TODO filter author?
-  const [author, _setAuthor] = useState<Option.Option<string>>(initialAuthor)
-  const repo = RQE.useQuery(Queries.getRepo(orgRepo))
-  const pulls = RQE.useQuery(
-    Queries.pullRequests({
-      author,
-      repo: orgRepo,
-    })
-  )
+  const [_author, _setAuthor] = useState<Option.Option<string>>(initialAuthor)
+  const repo = useAtomValue(Repo.getRepoAtom(orgRepo))
+
+  const pulls = useAtomValue(GitHub.PullRequests.listAtom(orgRepo))
 
   const [elementFocusIndex, setElementFocusIndex] = useState(0)
   const focusedElement = elementOrder[elementFocusIndex % elementOrder.length]
@@ -37,54 +30,23 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
   const [selectedPrNumber, setSelectedPrNumber] = useState<Option.Option<number>>(Option.none())
 
   const selectedPr = Match.value([pulls, selectedPrNumber]).pipe(
-    Match.when([{ isSuccess: true }, Option.isSome], ([{ data }, prNumber]) =>
-      Option.fromNullable(data.find((pr) => pr.number === prNumber.value))
+    Match.when([Result.isSuccess, Option.isSome], ([{ value }, prNumber]) =>
+      Option.fromNullable(value.find((pr) => pr.number === prNumber.value))
     ),
     Match.orElse(() => Option.none())
   )
 
   useEffect(() => {
-    if (pulls.isSuccess) {
-      setSelectedPrNumber(Option.fromNullable(pulls.data[0]?.number))
+    if (Result.isSuccess(pulls)) {
+      setSelectedPrNumber(Option.fromNullable(pulls.value[0]?.number))
     }
-  }, [pulls.isSuccess, pulls.data])
+  }, [pulls])
 
-  const description = RQE.useQuery(
-    Queries.pullRequestMarkdownDescription({
-      number: selectedPrNumber,
-      repo: Option.none(),
-    })
-  )
+  const description = useAtomValue(GitHub.PullRequest.markdownDescriptionAtom(selectedPrNumber))
 
   const showToast = useToast((state) => state.showToast)
 
-  const updateBranch = RQE.useMutation({
-    mutationFn: (input: { repo: string; number: number; type: 'rebase' | 'merge' }) =>
-      AppRuntime.runPromiseExit(GitHub.PullRequest.updateBranch(input).pipe(Effect.scoped)),
-    onSuccess(_, { repo, number, type }) {
-      showToast({
-        kind: 'success',
-        message: `${repo}#${number} updated with ${type}`,
-      })
-    },
-    onError(error, { repo, number }) {
-      const message = pipe(
-        error.cause,
-        Cause.map((error) =>
-          Match.value(error).pipe(
-            Match.when(
-              Match.instanceOf(GitHub.PermissionError),
-              () => `No permission to update ${repo}#${number}`
-            ),
-            Match.orElse(() => `Unable to update ${repo}#${number}`)
-          )
-        ),
-        Cause.pretty
-      )
-
-      showToast({ kind: 'danger', message })
-    },
-  })
+  const updateBranch = useAtomSet(GitHub.PullRequest.updateBranchAtom, { mode: 'promiseExit' })
 
   useKeyboard((key) => {
     if (key.name === 'tab') {
@@ -93,24 +55,48 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
     }
     if (key.name === 'm' && key.shift) {
       Match.value([repo, selectedPrNumber]).pipe(
-        Match.when([{ isSuccess: true, data: Option.isSome }, Option.isSome], ([repo, number]) =>
-          updateBranch.mutate({
-            repo: repo.data.value,
+        Match.when([Result.isSuccess, Option.isSome], async ([repo, number]) => {
+          if (Option.isNone(repo.value)) {
+            return
+          }
+          const options = {
+            repo: repo.value.value,
             number: number.value,
             type: 'merge',
-          })
-        )
+          } as const
+          const result = await updateBranch(options)
+          if (Exit.isSuccess(result)) {
+            showToast({
+              kind: 'success',
+              message: `${options.repo}#${options.number} updated with ${options.type}`,
+            })
+          } else {
+            showToast({ kind: 'danger', message: 'Unable to update PR branch' })
+          }
+        })
       )
     }
     if (key.name === 'r' && key.shift) {
       Match.value([repo, selectedPrNumber]).pipe(
-        Match.when([{ isSuccess: true, data: Option.isSome }, Option.isSome], ([repo, number]) =>
-          updateBranch.mutate({
-            repo: repo.data.value,
+        Match.when([Result.isSuccess, Option.isSome], async ([repo, number]) => {
+          if (Option.isNone(repo.value)) {
+            return
+          }
+          const options = {
+            repo: repo.value.value,
             number: number.value,
             type: 'rebase',
-          })
-        )
+          } as const
+          const result = await updateBranch(options)
+          if (Exit.isSuccess(result)) {
+            showToast({
+              kind: 'success',
+              message: `${options.repo}#${options.number} updated with ${options.type}`,
+            })
+          } else {
+            showToast({ kind: 'danger', message: 'Unable to update PR branch' })
+          }
+        })
       )
     }
   })
@@ -119,9 +105,9 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
     <box padding={1} flexDirection='column'>
       <ascii-font text='ghui' font='tiny' marginBottom={2} />
       <box flexDirection='row' alignItems='center' gap={1}>
-        {Match.value(repo).pipe(
-          Match.when({ isLoading: true }, () => <Loading kind='dots' />),
-          Match.when({ isSuccess: true }, ({ data: repo }) => (
+        {Result.builder(repo)
+          .onWaiting(() => <Loading kind='dots' />)
+          .onSuccess((repo) => (
             <>
               <text>{Option.getOrThrow(repo)}</text>
               <text>{'→'}</text>
@@ -133,9 +119,8 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
                 </>
               )}
             </>
-          )),
-          Match.orElse(() => null)
-        )}
+          ))
+          .orNull()}
       </box>
       <box flexDirection='row'>
         <box
@@ -145,8 +130,8 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
           borderColor={focusedElement === 'list' ? 'white' : 'gray'}
         >
           {Match.value(pulls).pipe(
-            Match.when({ isLoading: true }, () => <Loading kind='dots' />),
-            Match.when({ isSuccess: true }, ({ data: prs }) => (
+            Match.when(Result.isWaiting, () => <Loading kind='dots' />),
+            Match.when(Result.isSuccess, ({ value: prs }) => (
               <select
                 focused={focusedElement === 'list'}
                 height='100%'
@@ -190,17 +175,18 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
             )).pipe(Option.getOrNull)}
           </box>
 
-          {Match.value(description).pipe(
-            Match.when({ isLoading: true }, () => <Loading kind='dots' />),
-            Match.when({ status: 'success' }, ({ data }) =>
-              data.length > 0 ? (
-                <text>{data}</text>
-              ) : (
-                <text attributes={TextAttributes.DIM}>No PR description</text>
-              )
-            ),
-            Match.orElse(() => null)
-          )}
+          {Result.builder(description)
+            .onWaiting(() => <Loading kind='dots' />)
+            .onSuccess(
+              Option.match({
+                onNone: () => <text attributes={TextAttributes.DIM}>No PR description</text>,
+                onSome: (value) => <text>{value}</text>,
+              })
+            )
+            .onFailure(() => (
+              <text attributes={TextAttributes.DIM}>Error fetching PR description</text>
+            ))
+            .orNull()}
         </scrollbox>
       </box>
     </box>
